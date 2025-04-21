@@ -63,7 +63,7 @@ HEADERS = {
 }
 
 
-def fetch_all_player_names(csv_path="./data/ittf_all_player_names.csv"):
+def fetch_all_player_names(csv_path="./data/player_list.csv"):
     """
     Fetch every playerName from the WTT API by:
       - looping CategoryCode in [SEN, YOU]

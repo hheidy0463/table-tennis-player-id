@@ -2,9 +2,7 @@
 import os, sys, csv, pickle, time
 from tqdm import tqdm
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
-import util
-from name_utils import (
+from scripts.name_utils import (
     cached_match_name,
     raw_token_lists_from_data,
     canonize_score_tokens,

@@ -32,7 +32,7 @@ def scrape_players_by_gender(driver, scroll_pause=1.0):
             continue
     return names
 
-def scrape_players_list(csv_path="./data/players_player_list.csv"):
+def scrape_players_list(csv_path="./data/player_list.csv"):
     """
     Scrapes the WTT players list for both genders by loading
     "?gender=M" and "?gender=F" pages, scrolling fully, and
