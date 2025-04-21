@@ -1,130 +1,99 @@
 # name_utils.py
-import csv
+import csv, re, numpy as np
 from functools import lru_cache
+from collections import defaultdict
 from rapidfuzz import process, fuzz
-import numpy as np
 
+# ── helpers ────────────────────────────────────────────────────────────────
+def expand_initial_surname(token: str):
+    # “COK I”  →  “I COK”;   “L COK” → “L COK” (unchanged)
+    if re.match(r"^[A-Z]{2,}\s[A-Z]$", token):
+        last, initial = token.split()
+        return f"{initial} {last}"
+    if re.match(r"^[A-Z]\s[A-Z]{2,}$", token):
+        initial, last = token.split()
+        return f"{initial} {last}"
+    return token
 
 def canonize_score_tokens(tokens):
-    """
-    Normalize raw token list into [team1, s1, r1, team2, s2, r2], or None.
-    """
     if len(tokens) == 6:
         return tokens
     if len(tokens) == 8:
-        team1 = tokens[0] + "/" + tokens[1]
-        s1, r1 = tokens[2], tokens[3]
-        team2 = tokens[4] + "/" + tokens[5]
-        s2, r2 = tokens[6], tokens[7]
-        return [team1, s1, r1, team2, s2, r2]
+        t1, s1, r1, t2, s2, r2 = (
+            tokens[0] + "/" + tokens[1],
+            tokens[2], tokens[3],
+            tokens[4] + "/" + tokens[5],
+            tokens[6], tokens[7],
+        )
+        return [t1, s1, r1, t2, s2, r2]
     return None
 
-
 def extract_name_spans(canon_tokens):
-    """
-    Given canonical [team1, s1, r1, team2, s2, r2], return [team1, team2].
-    """
     return [canon_tokens[0], canon_tokens[3]]
 
-
 def raw_token_lists_from_data(all_data):
-    """
-    Flatten OCR results into list of (frame_idx, [tokens]).
-    """
-    token_lists = []
-    replacements = {"O": "0"}
+    out, repl = [], {"O": "0"}
     for ok, idx, result in all_data:
         if not ok or result is None or (isinstance(result, str) and "OPTIM" in result):
             continue
         det = result[0]
         if det is None:
             continue
-        tokens = [r[1][0] for r in det]
-        for i, t in enumerate(tokens):
-            if t in replacements:
-                tokens[i] = replacements[t]
-            if "." in tokens[i]:
-                tokens[i] = tokens[i].replace(".", "")
-        token_lists.append((idx, tokens))
-    return token_lists
-
+        toks = [r[1][0] for r in det]
+        for i, t in enumerate(toks):
+            if t in repl: toks[i] = repl[t]
+            toks[i] = toks[i].replace(".", "")
+        out.append((idx, toks))
+    return out
 
 def load_reference_names(csv_path="./data/player_list.csv"):
-    """
-    Load master list of player names (uppercased, whitespace normalized).
-    """
     refs = []
     with open(csv_path, newline="", encoding="utf-8") as f:
-        reader = csv.reader(f)
-        for row in reader:
-            if not row:
-                continue
-            name = row[0].strip().upper()
-            if name:
-                refs.append(" ".join(name.split()))
+        for row in csv.reader(f):
+            if row:
+                refs.append(" ".join(row[0].upper().split()))
     return refs
 
+# ── surname index (global, built once) ─────────────────────────────────────
+_reference_names = tuple(load_reference_names())  # used by cached matcher
 
+surname_index = defaultdict(list)   # surname → list(full names)
+for full in _reference_names:
+    surname_index[full.split()[-1]].append(full)
+
+# ── main matcher ───────────────────────────────────────────────────────────
 @lru_cache(maxsize=None)
-def cached_match_name(span, reference_names):
+def cached_match_name(span: str) -> str | None:
     """
-    Memoized matcher for single or doubles spans; supports exact, reversed, and fuzzy.
+    Return best‑matched full name (or 'A / B' for doubles) or None.
     """
-    query = span.replace("-", " ").upper().strip()
+    query = expand_initial_surname(span.replace("-", " ").upper().strip())
     query = " ".join(query.split())
 
-    # Doubles: split on '/'
+    # ——— doubles ————————————————————————————
     if "/" in query:
-        parts = [p.strip() for p in query.split("/")]
-        matched = []
+        parts, matched = [p.strip() for p in query.split("/")], []
         for part in parts:
-            # Attempt exact full-name
-            if part in reference_names:
-                matched.append(part)
-                continue
-            # Attempt reversed full-name 'Last First'
-            tokens = part.split()
-            if len(tokens) > 1:
-                rev = " ".join(tokens[::-1])
-                if rev in reference_names:
-                    matched.append(rev)
-                    continue
-            # Exact surname if single token
-            if len(tokens) == 1:
-                surname = tokens[0]
-                hits = [name for name in reference_names if name.split()[-1] == surname]
-                if len(hits) == 1:
-                    matched.append(hits[0])
-                    continue
-            # Fuzzy match fallback
-            scores = process.cdist([part], reference_names, scorer=fuzz.token_set_ratio)
-            idx = int(np.argmax(scores[0]))
-            top_score = scores[0][idx]
-            if top_score >= 80:
-                matched.append(reference_names[idx])
-            else:
+            hit = cached_match_name(part)    # recurse on singles logic
+            if hit is None:
                 return None
+            matched.append(hit)
         return " / ".join(matched)
 
-    # Single: exact full-name
-    if query in reference_names:
+    # ——— singles  (exact → reversed → unique surname → fuzzy) ————————
+    if query in _reference_names:
         return query
-    # Single: reversed full-name
+
     tokens = query.split()
     if len(tokens) > 1:
         rev = " ".join(tokens[::-1])
-        if rev in reference_names:
+        if rev in _reference_names:
             return rev
-    # Single: exact surname
+
     if len(tokens) == 1:
-        surname = tokens[0]
-        hits = [name for name in reference_names if name.split()[-1] == surname]
-        if len(hits) == 1:
-            return hits[0]
-    # Single: fuzzy full-name
-    scores = process.cdist([query], reference_names, scorer=fuzz.token_set_ratio)
-    idx = int(np.argmax(scores[0]))
-    top_score = scores[0][idx]
-    if top_score >= 75:
-        return reference_names[idx]
-    return None
+        surname_hits = surname_index.get(tokens[0], [])
+        if len(surname_hits) == 1:
+            return surname_hits[0]
+
+    match, score, _ = process.extractOne(query, _reference_names, scorer=fuzz.token_set_ratio) or (None, 0, None)
+    return match if score >= 75 else None
