@@ -97,9 +97,18 @@ def cached_match_name(span: str) -> str | None:
             return rev
 
     if len(tokens) == 1:
-        surname_hits = surname_index.get(tokens[0], [])
-        if len(surname_hits) == 1:
-            return surname_hits[0]
+        surname = tokens[0]
+        hits = surname_index.get(surname, [])
+        if len(hits) == 1:              # unique → return directly
+            return hits[0]
+
+        # NEW: when multiple players share the surname,
+        #      pick the one with highest fuzzy score
+        best, score, _ = process.extractOne(surname, hits or _reference_names,
+                                            scorer=fuzz.token_set_ratio)
+        if score >= 90:                 # very strict: need perfect surname match
+            return best
+
 
     match, score, _ = process.extractOne(query, _reference_names, scorer=fuzz.token_set_ratio) or (None, 0, None)
     return match if score >= 75 else None

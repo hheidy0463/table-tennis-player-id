@@ -93,9 +93,15 @@ for clip_dir in tqdm(clip_list, desc="clips"):
     if best_hits:
         for i, name in enumerate(best_hits[:4]):
             players[i] = name or ""
-    elif canonicals:                         # had frames but none ≥60 %
-        team1 = canonicals[0][1][0]          # first canon’s team1
-        players[:2] = [p.strip() for p in team1.split("/")] if "/" in team1 else [team1, ""]
+    elif canonicals:                       # had frames but none ≥60 %
+        team1 = canonicals[0][1][0]
+        if team1.isdigit():
+            pass         # leave players blank instead of recording “0”
+        elif "/" in team1:
+            players[:2] = [p.strip() for p in team1.split("/")[:2]]
+        else:
+            players[0] = team1
+
     else:
         tqdm.write(f"{clip_dir}: no canonical frames found")
 
