@@ -26,6 +26,12 @@ def canonize_score_tokens(tokens):
             tokens[6], tokens[7],
         )
         return [t1, s1, r1, t2, s2, r2]
+        # NEW: 4‑token  [name1, s1, name2, s2]  (no game‑points shown)
+    if len(tokens) == 4:
+        team1, s1, team2, s2 = tokens
+        r1 = r2 = "0"          # we don’t have in‑game points, fill with “0”
+        return [team1, s1, r1, team2, s2, r2]
+
     return None
 
 def extract_name_spans(canon_tokens):

@@ -56,12 +56,25 @@ for clip_dir in tqdm(clip_list, desc="clips"):
             parts += [p.strip() for p in team.split("/")] if "/" in team else [team.strip()]
 
         hits, part_scores, total = [], [], 0
+
+        parts = [p for p in parts if p and not p.isdigit() and len(p) > 1]
+
         for p in parts:
+            if not p or p.isdigit() or len(p) == 1:
+                continue
             hit = cached_match_name(p)
             score = 100 if hit else 0
-            if score < 60:                  # reject this frame
+            # inside the scoring loop, right before `if score < 60` …
+            if score < 60:
+                # allow 55 for last‑ditch match
+                if score >= 55:
+                    hits.append(match)
+                    part_scores.append(score)
+                    total += score
+                    continue
                 total = -1
                 break
+
             hits.append(hit)
             part_scores.append(score)
             total += score
