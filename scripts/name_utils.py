@@ -1,10 +1,9 @@
-# name_utils.py
 import csv, re, numpy as np
 from functools import lru_cache
 from collections import defaultdict
 from rapidfuzz import process, fuzz
 
-# ── helpers ────────────────────────────────────────────────────────────────
+# helpers 
 
 def _split_glued(token: str) -> str:
     # uppercase surname followed by capital‑initial given name
@@ -14,9 +13,9 @@ def _split_glued(token: str) -> str:
     return token
 
 def expand_initial_surname(token: str):
-    token = _split_glued(token)          # <‑‑ add this line
+    token = _split_glued(token)         
 
-    # “COK I”  →  “I COK”;   “L COK” → “L COK” (unchanged)
+    # example: “COK I”  →  “I COK”;   “L COK” → “L COK” 
     if re.match(r"^[A-Z]{2,}\s[A-Z]$", token):
         last, initial = token.split()
         return f"{initial} {last}"
@@ -29,7 +28,7 @@ import re
 def canonize_score_tokens(tokens):
     """
     Return [team1,s1,r1,team2,s2,r2] or None.
-    Handles 2/3/4/6/8 tokens, and *any* other length by sliding
+    Handles 2/3/4/6/8 tokens, and any other length by sliding
     a 4/6/8 window.  Strips stray “-” tokens automatically.
     """
     # 1) Clean & drop empties
@@ -85,7 +84,6 @@ def canonize_score_tokens(tokens):
     return None
 
 
-
 def extract_name_spans(canon_tokens):
     return [canon_tokens[0], canon_tokens[3]]
 
@@ -112,14 +110,14 @@ def load_reference_names(csv_path="./data/player_list.csv"):
                 refs.append(" ".join(row[0].upper().split()))
     return refs
 
-# ── surname index (global, built once) ─────────────────────────────────────
+# surname index 
 _reference_names = tuple(load_reference_names())  # used by cached matcher
 
 surname_index = defaultdict(list)   # surname → list(full names)
 for full in _reference_names:
     surname_index[full.split()[-1]].append(full)
 
-# ── main matcher ───────────────────────────────────────────────────────────
+# main matcher 
 @lru_cache(maxsize=None)
 def cached_match_name(span: str) -> str | None:
     """
@@ -128,7 +126,7 @@ def cached_match_name(span: str) -> str | None:
     query = expand_initial_surname(span.replace("-", " ").upper().strip())
     query = " ".join(query.split())
 
-    # ——— doubles ————————————————————————————
+    # doubles 
     if "/" in query:
         parts, matched = [p.strip() for p in query.split("/")], []
         for part in parts:
@@ -138,7 +136,7 @@ def cached_match_name(span: str) -> str | None:
             matched.append(hit)
         return " / ".join(matched)
 
-    # ——— singles  (exact → reversed → unique surname → fuzzy) ————————
+    # singles  (exact → reversed → unique surname → fuzzy) 
     if query in _reference_names:
         return query
 
@@ -154,8 +152,7 @@ def cached_match_name(span: str) -> str | None:
         if len(hits) == 1:              # unique → return directly
             return hits[0]
 
-        # NEW: when multiple players share the surname,
-        #      pick the one with highest fuzzy score
+        # when multiple players share the surname, pick the one with highest fuzzy score
         best, score, _ = process.extractOne(surname, hits or _reference_names,
                                             scorer=fuzz.token_set_ratio)
         if score >= 90:                 # very strict: need perfect surname match

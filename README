@@ -1,16 +1,16 @@
 # Table Tennis Player Identification
 
-This repository provides a pipeline to extract table tennis player names from scoreboard OCR outputs and match them against a reference list. It also includes an optional scraper to refresh the player list from the WTT website.
+This repository provides a pipeline to extract table tennis player names from scoreboard OCR outputs and match them against a reference list. It also includes a scraper to refresh the player list from the WTT website.
 
 ## Repository Structure
 ```
 ONBOARDING_TASK/
 ├─ data/
-│  ├─ player_list.csv           # baked list of reference player names
+│  ├─ player_list.csv           # list of reference player names
 │  └─ samples/                  # 30 sample clips, each with `sb/sb.pkl`
 ├─ scripts/
 │  ├─ identify_players.py       # main end-to-end driver script
-│  ├─ inspect_tokens.py         
+│  ├─ inspect_tokens.py         # analyzes tokenized data extracted from sample datasets
 │  ├─ name_utils.py             # canonicalization & fuzzy-matching logic
 │  ├─ scrape_ittf_rankings.py   # ITTF website scraper
 │  └─ scrape_wtt_players.py     # WTT website scraper
@@ -40,7 +40,7 @@ python scripts/identify_players.py --data data/samples
 ```
 The output CSV will be written to the repo root.
 
-## Optional: Refresh Reference List
+## Refresh Reference List
 To regenerate `data/player_list.csv` from the World Table Tennis website:
 ```bash
 python scripts/scrape_wtt_players.py --event 3108

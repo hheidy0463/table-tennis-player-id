@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 import os, sys, csv, pickle, time
 from tqdm import tqdm
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -8,7 +7,6 @@ from scripts.name_utils import (
     canonize_score_tokens,
 )
 
-# ── config ────────────────────────────────────────────────────────────────
 data_root = "./data/samples"
 MAX_FRAMES_PER_CLIP = 40        # examine at most 40 frames per clip
 
@@ -16,13 +14,13 @@ results = []
 clip_list = sorted(os.listdir(data_root))
 print("Total clips:", len(clip_list))
 
-# ── iterate clips ─────────────────────────────────────────────────────────
+# iterate through clips 
 for clip_dir in tqdm(clip_list, desc="clips"):
     sb_path = os.path.join(data_root, clip_dir, "sb", "sb.pkl")
     if not os.path.exists(sb_path):
         continue
 
-    # ── load OCR pickles ─
+    # load OCR pickles
     all_data = []
     with open(sb_path, "rb") as f:
         while True:
@@ -31,7 +29,7 @@ for clip_dir in tqdm(clip_list, desc="clips"):
             except EOFError:
                 break
 
-    # ── flatten & canonicalise ─
+    # flatten & canonicalise 
     raws = raw_token_lists_from_data(all_data)
     canonicals = [
         (idx, canon)
@@ -62,11 +60,10 @@ for clip_dir in tqdm(clip_list, desc="clips"):
                 continue
             hit = cached_match_name(p)
             score = 100 if hit else 0
-            # inside the scoring loop, right before `if score < 60` …
             if score < 60:
                 # allow 55 for last‑ditch match
                 if score >= 55:
-                    hits.append(match)
+                    hits.append(hit)
                     part_scores.append(score)
                     total += score
                     continue
@@ -81,17 +78,17 @@ for clip_dir in tqdm(clip_list, desc="clips"):
             best_score = total
             best_hits  = hits
 
-        # early exit if every part ≥60 and we matched 2 or 4 names
+        # early exit if every part ≥60 and matched 2 or 4 names
         if part_scores and min(part_scores) >= 60 and len(hits) in (2, 4):
             best_hits = hits
             break
 
-    # ── record players ─
+    # record players
     players = ["", "", "", ""]
     if best_hits:
         for i, name in enumerate(best_hits[:4]):
             players[i] = name or ""
-    elif canonicals:                       # had frames but none ≥60 %
+    elif canonicals:                       # had frames but none were ≥ 60 %
         team1 = canonicals[0][1][0]
         if team1.isdigit():
             pass         # leave players blank instead of recording “0”
@@ -105,7 +102,7 @@ for clip_dir in tqdm(clip_list, desc="clips"):
 
     results.append((clip_dir, players))
 
-# ── write outputs ─────────────────────────────────────────────────────────
+# write outputs 
 with open("video_player_names_matched.csv", "w", newline="", encoding="utf-8") as f:
     w = csv.writer(f)
     w.writerow(["clip_id", "player1", "player2", "player3", "player4"])

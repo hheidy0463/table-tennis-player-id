@@ -1,9 +1,17 @@
-#!/usr/bin/env python
 import os, pickle, re
 from collections import Counter
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from scripts.name_utils import raw_token_lists_from_data
+
+"""
+The `inspect_tokens.py` script analyzes tokenized data extracted from sample datasets. 
+It loads serialized data files, processes them to extract raw token lists, and computes 
+the distribution of token lengths across all samples. The script also prints examples 
+of token sequences grouped by their length, providing insight into the variety and 
+frequency of token lengths detected in the data. This helps in understanding the 
+characteristics of the tokenized data used in the project.
+"""
 
 DATA_ROOT = "./data/samples"
 lengths  = Counter()
@@ -27,7 +35,7 @@ for clip in sorted(os.listdir(DATA_ROOT)):
     for idx, toks in raws:
         L = len(toks)
         lengths[L] += 1
-        # keep up to 3 examples per length
+        # 3 examples per length
         if len(examples.setdefault(L, [])) < 3:
             examples[L].append((clip, toks))
 

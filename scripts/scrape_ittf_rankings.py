@@ -4,11 +4,8 @@ import time
 import requests
 
 # -----------------------------------------------
-# Comprehensive WTT player name scraper using official API
-# Supports both "GetRankingIndividuals" and "GetRankingPairs" endpoints,
-# automatically switching based on event type and extracting both
-# players from pairs responses.
-# Confirmed via DevTools XHR initiator chain.
+# WTT player name scraper using official API
+# Supports "GetRankingIndividuals" and "GetRankingPairs" endpoints.
 # -----------------------------------------------
 
 # Base endpoints
@@ -21,7 +18,6 @@ PAIRS_ENDPOINT = (
     "internalttu/RankingsCurrentWeek/CurrentWeek/GetRankingPairs"
 )
 
-# SubEventCode → human event name
 EVENTS = {
     # Senior events
     "MS": "MEN'S SINGLES",
@@ -42,15 +38,14 @@ EVENTS = {
 }
 
 # Age categories: Senior and Youth
-CATEGORIES = ["SEN", "YOU"]  # "YOU" per DevTools for Youth
+CATEGORIES = ["SEN", "YOU"] 
 
 # Pagination: 100 players per page
 PAGE_SIZE = 100
 
 # Request headers
-# ▶▶▶  Insert your keys here  ◀◀◀
-API_KEY      = "2bf8b222-532c-4c60-8ebe-eb6fdfebe84a"      # <-- replace if it changes
-SEC_API_KEY  = "S_WTT_882jjh7basdj91834783mds8j2jsd81"      # <-- replace if it changes
+API_KEY = os.getenv("API_KEY")
+SEC_API_KEY = os.getenv("SEC_API_KEY")
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0",
@@ -67,8 +62,8 @@ def fetch_all_player_names(csv_path="./data/player_list.csv"):
     """
     Fetch every playerName from the WTT API by:
       - looping CategoryCode in [SEN, YOU]
-      - looping all SubEventCodes (EVENTS keys)
-      - paging StartRank → EndRank in PAGE_SIZE increments
+      - looping all EVENTS keys
+      - paging StartRank to EndRank in PAGE_SIZE increments
     Uses:
       - GetRankingIndividuals for MS, WS, MDI, WDI, XDI, BS, GS, BDI, GDI
       - GetRankingPairs for MD, WD, XD, BD, GD
@@ -87,7 +82,7 @@ def fetch_all_player_names(csv_path="./data/player_list.csv"):
             start = 1
             while True:
                 end_rank = start + PAGE_SIZE - 1
-                # choose endpoint
+                # choose the endpoint
                 if sub_event in PAIRS_EVENTS:
                     url = PAIRS_ENDPOINT
                 else:
@@ -124,7 +119,7 @@ def fetch_all_player_names(csv_path="./data/player_list.csv"):
                 start += PAGE_SIZE
                 time.sleep(0.1)
 
-    # write results
+    # write the results
     with open(csv_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
         writer.writerow(["player_name"])
