@@ -6,17 +6,18 @@ This repository provides a pipeline to extract table tennis player names from sc
 ```
 ONBOARDING_TASK/
 ├─ data/
-│  ├─ player_list.csv           # list of reference player names
-│  └─ samples/                  # 30 sample clips, each with `sb/sb.pkl`
+│  ├─ player_list.csv           # Reference list of player names
+│  └─ samples/                  # 30 sample clips, each containing `sb/sb.pkl`
 ├─ scripts/
-│  ├─ identify_players.py       # main end-to-end driver script
-│  ├─ inspect_tokens.py         # analyzes tokenized data extracted from sample datasets
-│  ├─ name_utils.py             # canonicalization & fuzzy-matching logic
+│  ├─ identify_players.py       # Main end-to-end driver script
+│  ├─ inspect_tokens.py         # Analyzes tokenized data from sample datasets
+│  ├─ name_utils.py             # Canonicalization & fuzzy-matching logic
 │  ├─ scrape_ittf_rankings.py   # ITTF website scraper
 │  └─ scrape_wtt_players.py     # WTT website scraper
 ├─ README.md                    
 ├─ requirements.txt             # Python dependencies
 └─ video_player_names_matched.csv
+
 ```  
 
 ## Prerequisites
